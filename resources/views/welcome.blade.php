@@ -188,7 +188,7 @@
         var botmanWidget = {
             frameEndpoint: '/botman/chat', // URL del iframe de chat
 
-            chatServer: '/botman', // endpoint al que enviará los mensajes (nuestro /botman)
+            chatServer: '/api/botman', // endpoint al que enviará los mensajes (nuestro /botman)
             title: 'Asistente Virtual', // Título del chat
             mainColor: '#FF2D20', // Color principal del chat
         };
