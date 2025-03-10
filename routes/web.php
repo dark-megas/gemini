@@ -11,6 +11,4 @@ Route::get('/', function () {
 
 
 
-Route::get('/botman/chat', function () {
-    return view('botman'); // renderiza resources/views/botman.blade.php
-});
+
