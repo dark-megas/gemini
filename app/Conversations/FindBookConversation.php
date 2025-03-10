@@ -32,7 +32,8 @@ class FindBookConversation extends Conversation
     }
 
     /**
-     * Integra la llamada a la "function" de Gemini para que pueda decidir
+     * Segundo paso: buscar el libro en Google Books.
+     * Integra la llamada a la function de Gemini para que pueda decidir
      * llamar a nuestra función "searchOnlineBook" y así buscar en Google Books.
      * @throws \Exception
      */
@@ -94,16 +95,13 @@ class FindBookConversation extends Conversation
         // Extraemos argumentos que Gemini decidió pasar
         $title = $args['title'] ?? $this->bookTitle;
 
-        // Obtenemos la key (definida en config/services.php con la variable .env)
         $apiKey = env('GOOGLE_API_KEY');
 
         // Construimos la URL final
         $url = "https://www.googleapis.com/books/v1/volumes?q={$title}&key={$apiKey}";
 
         try {
-            // Usamos Http de Laravel para hacer la petición
             $response = Http::get($url);
-
             if ($response->successful()) {
                 $books = $response->json();
 

@@ -15,13 +15,15 @@ class CharlarConversation extends Conversation
         $this->geminiAi = $geminiAi;
     }
 
+    /**
+     * Inicia la conversación
+     */
     public function chat()
     {
         $this->ask(count($this->history) === 0 ? '¿De qué te gustaría hablar?' : '...', function($answer) {
             $mensajeUsuario = $answer->getText();
 
-
-            // Instruction to exit the conversation
+            // Instrucciones para el modelo
             $instruction = "Apartir del texto del usuario genera json el del ejemplo:".PHP_EOL;
             $instruction .= json_encode([
                 'close_session' => 'true|false',
@@ -31,6 +33,7 @@ class CharlarConversation extends Conversation
             $ner = $this->geminiAi->GeminiNerAnalysis($mensajeUsuario, $instruction);
 
             if (isset($ner['close_session']) && $ner['close_session'] === "true") {
+                // Cerrar la conversación si el modelo lo indica
                 return $this->say('¡Fue un placer hablar contigo! Hasta pronto. 👋');
             }
 
@@ -56,7 +59,9 @@ class CharlarConversation extends Conversation
             $this->chat();
         });
     }
-
+    /**
+     * Inicia la conversación
+     */
     public function run()
     {
         $this->history = [];

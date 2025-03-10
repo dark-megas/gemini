@@ -4,56 +4,66 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use Exception;
+
 class Gemini_ai
 {
     protected mixed $apiKey;
     protected string $apiUrl;
     protected mixed $httpClient;
+
     public function __construct()
     {
+        // Obtiene la clave de la configuración de servicios (config/services.php)
         $this->apiKey = config('services.gemini_key');
+        // URL base de la API de Gemini en modo flash
         $this->apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key='.$this->apiKey;
+        // Cliente HTTP para realizar peticiones
         $this->httpClient = Http::class;
     }
 
-    public  function GeminiConversation($HistoryChat, $prompt)
+    /**
+     * Método para enviar una conversación a Gemini
+     * @param $HistoryChat array Historial de la conversación (roles y mensajes)
+     * @param $prompt string Instrucción o pregunta para generar respuesta
+     * @return mixed Texto generado por Gemini o array de error
+     */
+    public function GeminiConversation($HistoryChat, $prompt)
     {
         try {
-
             $payload = [
                 "system_instruction" => [
                     "parts" => [
-                        [
-                            "text" => $prompt
-                        ]
+                        ["text" => $prompt]
                     ]
                 ],
                 'contents' => $HistoryChat,
             ];
 
+            // Envía una solicitud POST a la API con encabezados JSON
             $response =  $this->httpClient::withHeaders([
                 'Content-Type' => 'application/json'
             ])->post($this->apiUrl, $payload);
 
-            //Check if the request was successful
+            // Verifica si la solicitud fue exitosa
             if ($response->status() != 200) {
-                return [
-                    'error_type' => true
-                ];
+                return ['error_type' => true];
             }
 
+            // Toma la respuesta, la convierte a una colección y extrae el texto
             $geminiResponse = $response->collect();
             $geminiValidator = $geminiResponse['candidates'][0]['content']['parts'][0]['text'];
+            return $geminiValidator;
         } catch (\Throwable $th) {
-            return [
-                'error_type' => true
-            ];
+            return ['error_type' => true];
         }
-
-
-        return $geminiValidator;
     }
 
+    /**
+     * Método para llamar a una función desde Gemini
+     * @param $prompt string Mensaje o instrucción
+     * @param $functions array Declaraciones de funciones para que Gemini las use
+     * @return array Respuesta con la llamada a la función o el contenido generado
+     */
     public function generateGeminiFunctionCall($prompt, array $functions): array
     {
         $data = [
@@ -75,10 +85,12 @@ class Gemini_ai
             $result = $response->collect();
 
             if (isset($result['candidates'][0]['content']['parts'][0]['functionCall'])) {
+                // Devuelve la llamada a la función
                 return [
                     'function_call' => $result['candidates'][0]['content']['parts'][0]['functionCall']
                 ];
             } elseif (isset($result['candidates'][0]['content']['parts'][0]['text'])) {
+                // Devuelve el texto si no se generó una función
                 return [
                     'content' => nl2br($result['candidates'][0]['content']['parts'][0]['text'])
                 ];
@@ -90,7 +102,13 @@ class Gemini_ai
         }
     }
 
-    public  function GeminiNerAnalysis($text, $instructions)
+    /**
+     * Método para analizar entidades nombradas en un texto
+     * @param $text string Texto a analizar
+     * @param $instructions string Instrucciones o contexto adicional
+     * @return array Array con información de las entidades extraídas
+     */
+    public function GeminiNerAnalysis($text, $instructions)
     {
         // Payload para enviar a Gemini
         $payload = [
@@ -98,9 +116,7 @@ class Gemini_ai
                 [
                     'role' => 'user',
                     'parts' => [
-                        [
-                            'text' => $text,
-                        ]
+                        ['text' => $text]
                     ]
                 ],
                 [
@@ -126,8 +142,8 @@ class Gemini_ai
                                 'response' => [
                                     'name' => 'analyze_ner',
                                     'content' => [
-                                        "text" => $text,
-                                        "context" => $instructions,
+                                        'text' => $text,
+                                        'context' => $instructions,
                                     ]
                                 ]
                             ]
@@ -159,7 +175,6 @@ class Gemini_ai
             ]
         ];
 
-
         // Solicitud a Gemini
         $response = Http::withHeaders([
             'Content-Type' => 'application/json'
@@ -169,17 +184,16 @@ class Gemini_ai
 
         // Verificar si la solicitud fue exitosa
         if ($response->status() != 200) {
-            return response()->json(['error' => 'Error in the request'], 401);
+            return ['error' => 'Error in the request'];
         }
 
         $geminiResponse = $response->json();
 
+        // Extraemos el texto devuelto (puede venir en formato JSON)
         $geminiValidator = $geminiResponse['candidates'][0]['content']['parts'][0]['text'] ?? null;
-        $geminiValidator =  str_replace(["`","json"], ["",""], $geminiValidator);
+        $geminiValidator = str_replace(["`","json"], ["",""], $geminiValidator);
         $geminiValidator = json_decode($geminiValidator, true);
-//        dd($geminiValidator);
 
         return $geminiValidator;
     }
-
 }

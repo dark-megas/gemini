@@ -17,7 +17,9 @@ class BookRecommendationConversation extends Conversation
         $this->geminiAi = $geminiAi;
         $this->history = [];
     }
-
+    /**
+     * Pregunta al usuario sobre su género literario favorito.
+     */
     public function askGenre()
     {
         $this->ask('¿Cuál es tu género literario favorito? (fantasía, ciencia ficción, romance, etc.)', function($answer) {
@@ -31,7 +33,9 @@ class BookRecommendationConversation extends Conversation
             $this->askAuthorPreference();
         });
     }
-
+    /**
+     * Pregunta al usuario si tiene un autor preferido o si desea descubrir nuevos autores.
+     */
     public function askAuthorPreference()
     {
         $this->ask('¿Tienes algún autor preferido o te gustaría descubrir nuevos autores?', function($answer) {
@@ -45,11 +49,13 @@ class BookRecommendationConversation extends Conversation
             $this->recommendBooks();
         });
     }
-
+    /**
+     * Recomienda tres libros al usuario basados en su género literario y autor preferido.
+     */
     public function recommendBooks()
     {
-        $prompt = "Recomienda tres libros del género {$this->genre}.";
 
+        $prompt = "Recomienda tres libros del género {$this->genre}.";
         if (strtolower($this->author) !== 'no' && strtolower($this->author) !== 'nuevos') {
             $prompt .= " Similar al estilo del autor: {$this->author}.";
         }
@@ -72,6 +78,9 @@ class BookRecommendationConversation extends Conversation
         }
     }
 
+    /**
+     * Inicia la conversación
+     */
     public function run()
     {
         $this->askGenre();

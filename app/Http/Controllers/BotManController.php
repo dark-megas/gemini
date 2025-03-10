@@ -17,13 +17,10 @@ use App\Conversations\CharlarConversation;
 use App\Conversations\FindBookConversation;
 use Illuminate\Support\Facades\Storage;
 
-
 class BotManController extends Controller
 {
     protected Gemini_ai $geminiAi;
     private $disk;
-
-
 
     protected array $cases = [
         'recomendacion',
@@ -34,14 +31,21 @@ class BotManController extends Controller
 
     public function __construct(Gemini_ai $geminiAi)
     {
+        // Inyección de la clase que conecta con la API de Gemini
         $this->geminiAi = $geminiAi;
+        // Definimos un disco específico para almacenar la información del bot
         $this->disk = Storage::disk('botman');
     }
 
     public function handle(Request $request)
     {
+        // Carga del driver Web para escuchar interacciones por navegador
         DriverManager::loadDriver(WebDriver::class);
 
+        // Creación de la instancia de BotMan con:
+        // - Configuración de caché de conversaciones y usuarios.
+        // - Uso de Redis para almacenar y recuperar estados.
+        // - Un driver FileStorage para persistir datos localmente
         $botman = BotManFactory::create(
             [
                 'config' => [
@@ -49,52 +53,54 @@ class BotManController extends Controller
                     'user_cache_time' => 950,
                 ]
             ],
-
             new RedisCache(
                 env('REDIS_HOST'),
                 env('REDIS_PORT'),
-                env('REDIS_PASSWORD') // <-- la pasamos aquí
+                env('REDIS_PASSWORD')
             ),
-
             $request,
-
             null,
-
             new FileStorage(storage_path('botman'))
         );
 
-
-        // Mensaje inicial con botones claros orientados a la idea del chatbot
+        // Capturamos cualquier mensaje (con la expresión '.*') y devolvemos un mensaje inicial
+        // con botones que guían al usuario a las distintas funcionalidades
         $botman->hears('.*', function (BotMan $bot) {
             $question = Question::create("¡Hola! 📚 Soy BookBot, ¿En qué puedo ayudarte hoy?")
                 ->addButtons([
                     Button::create('Recomiéndame libros')->value('recomendacion'),
                     Button::create('Charlar de literatura')->value('charlar'),
-                    Button::create('Quiero informacion de un libro libro')->value('buscar'),
+                    Button::create('Quiero informacion de un libro')->value('buscar'),
                     Button::create('Salir')->value('salir'),
                 ]);
 
             $bot->reply($question);
         });
 
-        // Manejar las respuestas de los botones interactivos
+        // Maneja la acción según el botón presionado por el usuario
+        // Inicia la conversación correspondiente o da por finalizada la interacción
         $botman->hears('('.implode('|',$this->cases).')', function (BotMan $bot, $payload) {
             switch ($payload) {
                 case 'recomendacion':
+                    // Conversación para recomendar libros
                     $bot->startConversation(new BookRecommendationConversation($this->geminiAi));
                     break;
                 case 'charlar':
+                    // Conversación para charlar de literatura
                     $bot->startConversation(new CharlarConversation($this->geminiAi));
                     break;
                 case 'buscar':
+                    // Conversación para buscar libros específicos
                     $bot->startConversation(new FindBookConversation($this->geminiAi));
                     break;
                 case 'salir':
-                    $bot->reply('¡Gracias por interactuar conmigo! Hasta la próxima 👋');
+                    // Finaliza la interacción
+                    $bot->reply('¡Gracias por interactuar conmigo! Hasta la próxima \uD83D\uDC4B');
                     break;
             }
         });
 
+        // Escucha los mensajes entrantes y procesa las conversaciones
         $botman->listen();
     }
 }
