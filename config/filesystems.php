@@ -38,6 +38,14 @@ return [
             'report' => false,
         ],
 
+        'botman' => [
+            'driver' => 'local',
+            'root' => storage_path('app/botman'),
+            'serve' => true,
+            'throw' => false,
+            'report' => false,
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),

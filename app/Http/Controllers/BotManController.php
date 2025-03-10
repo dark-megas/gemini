@@ -3,31 +3,81 @@
 namespace App\Http\Controllers;
 
 use BotMan\BotMan\BotMan;
+use BotMan\BotMan\BotManFactory;
 use BotMan\BotMan\Drivers\DriverManager;
+use BotMan\BotMan\Storages\Drivers\FileStorage;
 use BotMan\Drivers\Web\WebDriver;
 use Illuminate\Http\Request;
+use BotMan\BotMan\Messages\Outgoing\Actions\Button;
+use BotMan\BotMan\Messages\Outgoing\Question;
+use BotMan\BotMan\Cache\RedisCache;
+use App\Services\Gemini_ai;
+use App\Conversations\BookRecommendationConversation;
+use App\Conversations\CharlarConversation;
+use App\Conversations\FindBookConversation;
+
 
 class BotManController extends Controller
 {
+    protected Gemini_ai $geminiAi;
+
+    protected array $cases = [
+        'recomendacion',
+        'charlar',
+        'buscar',
+        'salir'
+    ];
+
+    public function __construct(Gemini_ai $geminiAi)
+    {
+        $this->geminiAi = $geminiAi;
+    }
+
     public function handle(Request $request)
     {
-        // Cargar el driver Web de BotMan para asegurarnos de manejar mensajes web
         DriverManager::loadDriver(WebDriver::class);
 
-        // Obtener instancia de BotMan (proveída por el service provider de BotMan)
-        $botman = app('botman');
+        $botman = BotManFactory::create([
+                'config' => [
+                    'conversation_cache_time' => 950,
+                    'user_cache_time' => 950,
+                ]
+            ],
+            new RedisCache(env('REDIS_HOST'), env('REDIS_PORT')),
+            null, new FileStorage(storage_path('botman')
+        ));
 
-        // Registrar comandos/escuchas
-        $botman->hears('{mensaje}', function($bot, $mensaje) {
-            if ($mensaje === 'hi' || $mensaje === 'hola') {
-                $bot->reply('¡Hola! ¿Cómo te llamas?');
-                // Aquí podríamos iniciar una conversación para preguntar el nombre
-            } else {
-                $bot->reply("Comando no reconocido. Escribe 'hola' para empezar.");
+        // Mensaje inicial con botones claros orientados a la idea del chatbot
+        $botman->hears('.*', function (BotMan $bot) {
+            $question = Question::create("¡Hola! 📚 Soy BookBot, ¿En qué puedo ayudarte hoy?")
+                ->addButtons([
+                    Button::create('Recomiéndame libros')->value('recomendacion'),
+                    Button::create('Charlar de literatura')->value('charlar'),
+                    Button::create('Quiero informacion de un libro libro')->value('buscar'),
+                    Button::create('Salir')->value('salir'),
+                ]);
+
+            $bot->reply($question);
+        });
+
+        // Manejar las respuestas de los botones interactivos
+        $botman->hears('('.implode('|',$this->cases).')', function (BotMan $bot, $payload) {
+            switch ($payload) {
+                case 'recomendacion':
+                    $bot->startConversation(new BookRecommendationConversation($this->geminiAi));
+                    break;
+                case 'charlar':
+                    $bot->startConversation(new CharlarConversation($this->geminiAi));
+                    break;
+                case 'buscar':
+                    $bot->startConversation(new FindBookConversation($this->geminiAi));
+                    break;
+                case 'salir':
+                    $bot->reply('¡Gracias por interactuar conmigo! Hasta la próxima 👋');
+                    break;
             }
         });
 
-        // Iniciar la escucha del bot (procesa la entrada y envía respuesta)
         $botman->listen();
     }
 }
