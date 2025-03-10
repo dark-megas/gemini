@@ -42,15 +42,27 @@ class BotManController extends Controller
     {
         DriverManager::loadDriver(WebDriver::class);
 
-        $botman = BotManFactory::create([
+        $botman = BotManFactory::create(
+            [
                 'config' => [
                     'conversation_cache_time' => 950,
                     'user_cache_time' => 950,
                 ]
             ],
-            new RedisCache(env('REDIS_HOST'), env('REDIS_PORT')), env('REDIS_PASSWORD'),
-            null, new FileStorage(storage_path('botman')
-        ));
+
+            new RedisCache(
+                env('REDIS_HOST'),
+                env('REDIS_PORT'),
+                env('REDIS_PASSWORD') // <-- la pasamos aquí
+            ),
+
+            $request,
+
+            null,
+
+            new FileStorage(storage_path('botman'))
+        );
+
 
         // Mensaje inicial con botones claros orientados a la idea del chatbot
         $botman->hears('.*', function (BotMan $bot) {
