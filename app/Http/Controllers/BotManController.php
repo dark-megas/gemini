@@ -48,7 +48,7 @@ class BotManController extends Controller
                     'user_cache_time' => 950,
                 ]
             ],
-            new RedisCache(env('REDIS_HOST'), env('REDIS_PORT')),
+            new RedisCache(env('REDIS_HOST'), env('REDIS_PORT')), env('REDIS_PASSWORD'),
             null, new FileStorage(storage_path('botman')
         ));
 
