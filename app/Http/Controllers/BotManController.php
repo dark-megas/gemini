@@ -15,11 +15,15 @@ use App\Services\Gemini_ai;
 use App\Conversations\BookRecommendationConversation;
 use App\Conversations\CharlarConversation;
 use App\Conversations\FindBookConversation;
+use Illuminate\Support\Facades\Storage;
 
 
 class BotManController extends Controller
 {
     protected Gemini_ai $geminiAi;
+    private $disk;
+
+
 
     protected array $cases = [
         'recomendacion',
@@ -31,6 +35,7 @@ class BotManController extends Controller
     public function __construct(Gemini_ai $geminiAi)
     {
         $this->geminiAi = $geminiAi;
+        $this->disk = Storage::disk('botman');
     }
 
     public function handle(Request $request)
